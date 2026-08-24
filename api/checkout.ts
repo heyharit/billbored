@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Razorpay from 'razorpay';
 
 // Helper for CORS

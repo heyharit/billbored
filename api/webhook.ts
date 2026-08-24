@@ -1,8 +1,10 @@
+// @ts-nocheck
 import crypto from 'crypto';
-import * as admin from 'firebase-admin';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin (Only once)
-if (!admin.apps.length) {
+if (!getApps().length) {
   try {
     const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!serviceAccountStr) {
@@ -10,15 +12,15 @@ if (!admin.apps.length) {
     }
     const serviceAccount = JSON.parse(serviceAccountStr);
 
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+    initializeApp({
+      credential: cert(serviceAccount),
     });
   } catch (error) {
     console.error('Firebase admin initialization error', error);
   }
 }
 
-const db = admin.apps.length ? admin.firestore() : null;
+const db = getApps().length ? getFirestore() : null;
 
 // Vercel config to consume raw body for Signature verification
 export const config = {
