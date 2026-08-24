@@ -30,11 +30,12 @@ const handler = async (req: any, res: any) => {
     });
 
     // Create an order in Razorpay
+    // Razorpay India accounts default to INR only. 
+    // We multiply by 84 to roughly convert the USD bid amount to INR (e.g. $1 = ₹84)
+    // Razorpay expects the amount in the smallest subunit (paise), so we multiply by 100 as well.
     const options = {
-      // BillboredX shows prices in USD, so we process in USD. 
-      // (Ensure international payments are enabled in your Razorpay dashboard if using USD)
-      amount: bidAmount * 100, 
-      currency: 'USD', 
+      amount: Math.round(bidAmount * 84 * 100), 
+      currency: 'INR', 
       receipt: `receipt_${Date.now()}`,
       notes: {
         url,
