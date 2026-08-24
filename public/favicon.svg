@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#000000" />
+  
+  <!-- Left Vertical of B -->
+  <rect x="15" y="20" width="12" height="60" fill="#ffffff" />
+  
+  <!-- Top loop of B -->
+  <path d="M 27 26 h 12 l 8 8 v 4 l -8 8 h -12" fill="none" stroke="#ffffff" stroke-width="12" stroke-linejoin="miter" stroke-linecap="square" />
+  
+  <!-- Bottom loop of B -->
+  <path d="M 27 50 h 12 l 8 8 v 8 l -8 8 h -12" fill="none" stroke="#ffffff" stroke-width="12" stroke-linejoin="miter" stroke-linecap="square" />
+
+  <!-- The X (Red) -->
+  <path d="M 60 20 l 25 60 m 0 -60 l -25 60" fill="none" stroke="#dc2626" stroke-width="12" stroke-linecap="square" />
+</svg>
