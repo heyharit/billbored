@@ -1,33 +1,26 @@
+// @ts-nocheck
 import crypto from 'crypto';
-import * as admin from 'firebase-admin';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin (Only once)
-if (!admin.apps.length) {
+if (!getApps().length) {
   try {
     const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (!serviceAccountStr) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT env variable is missing');
-    }
+    if (!serviceAccountStr) throw new Error('FIREBASE_SERVICE_ACCOUNT env variable is missing');
     const serviceAccount = JSON.parse(serviceAccountStr);
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
+    initializeApp({ credential: cert(serviceAccount) });
   } catch (error) {
     console.error('Firebase admin initialization error', error);
   }
 }
 
-const db = admin.apps.length ? admin.firestore() : null;
+const db = getApps().length ? getFirestore() : null;
 
-// Vercel config to consume raw body for Signature verification
 export const config = {
-  api: {
-    bodyParser: false,
-  },
+  api: { bodyParser: false },
 };
 
-// Helper to read raw body
 const getRawBody = async (req: any) => {
   const chunks = [];
   for await (const chunk of req) {
@@ -37,15 +30,12 @@ const getRawBody = async (req: any) => {
 };
 
 const handler = async (req: any, res: any) => {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   const rawBody = await getRawBody(req);
   const signature = req.headers['x-razorpay-signature'] as string;
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET as string;
 
-  // Verify Signature
   const expectedSignature = crypto
     .createHmac('sha256', webhookSecret)
     .update(rawBody.toString('utf-8'))
@@ -58,25 +48,20 @@ const handler = async (req: any, res: any) => {
 
   const event = JSON.parse(rawBody.toString('utf-8'));
 
-  // We listen for the payment captured event
   if (event.event === 'payment.captured' || event.event === 'order.paid') {
     const payment = event.payload.payment.entity;
-    
-    // Notes contain our custom billboard data
     const metadata = payment.notes;
-    
-    if (!db) {
-      console.error('Firestore is not initialized.');
-      return res.status(500).json({ error: 'Firestore not initialized' });
-    }
+
+    if (!db) return res.status(500).json({ error: 'Firestore not initialized' });
 
     try {
       if (!metadata) throw new Error('Missing notes in Razorpay payload');
 
-      const { url, displayName, description, category, bidAmount, bgImageUrl, editCode, upgradeId } = metadata;
+      const { url, displayName, description, category, bidAmount, bgImageUrl, editCode, editId, upgradeId } = metadata;
+      const bid = parseFloat(bidAmount);
 
       if (upgradeId) {
-        // Upgrade existing listing
+        // ── UPGRADE: ADD bid to existing currentPrice (never replace it)
         await db.collection('listings').doc(upgradeId).update({
           url,
           displayName,
@@ -84,21 +69,23 @@ const handler = async (req: any, res: any) => {
           title: url.replace(/^https?:\/\//i, '').split('/')[0],
           description,
           category,
-          currentPrice: parseFloat(bidAmount),
+          // FieldValue.increment ensures we ADD to currentPrice, not overwrite
+          currentPrice: FieldValue.increment(bid),
         });
-        console.log(`Updated listing ${upgradeId}`);
+        console.log(`Upgraded listing ${upgradeId} by +$${bid}`);
       } else {
-        // New listing
+        // ── NEW LISTING
         const newId = `list-${Date.now()}`;
         await db.collection('listings').doc(newId).set({
           url,
           displayName,
           bgImageUrl,
-          editCode,
+          editCode: editCode || '',
+          editId: editId || '',
           title: url.replace(/^https?:\/\//i, '').split('/')[0],
           description,
           category,
-          currentPrice: parseFloat(bidAmount),
+          currentPrice: bid,
           clicks: 0,
           purchasedAt: Date.now(),
         });

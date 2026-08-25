@@ -8,14 +8,19 @@ export const useListings = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'listings'), orderBy('currentPrice', 'desc'));
+    // Sort by price desc, then purchasedAt asc for tie-breaking (earliest buyer wins)
+    const q = query(
+      collection(db, 'listings'),
+      orderBy('currentPrice', 'desc'),
+      orderBy('purchasedAt', 'asc')
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: Listing[] = [];
       snapshot.forEach((doc) => {
         data.push({ id: doc.id, ...doc.data() } as Listing);
       });
-      // Add ranks dynamically based on price
+      // Add ranks dynamically based on sorted position
       const rankedData = data.map((item, index) => ({
         ...item,
         rank: index + 1

@@ -1,136 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Listing } from '../types';
-import { formatMoney } from '../utils';
-import { X, ExternalLink, Zap, Eye, Clock } from 'lucide-react';
 import { useListings } from '../hooks/useListings';
-
-interface HologramProps {
-  listing: Listing | null;
-  onClose: () => void;
-  onOvertake: (listing: Listing) => void;
-}
-
-const HologramModal: React.FC<HologramProps> = ({ listing, onClose, onOvertake }) => {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (listing) {
-      document.body.style.overflow = 'hidden';
-      requestAnimationFrame(() => setVisible(true));
-    } else {
-      document.body.style.overflow = '';
-      setVisible(false);
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [listing]);
-
-  if (!listing) return null;
-
-  const timeHeld = Date.now() - listing.purchasedAt;
-  const hoursHeld = Math.floor(timeHeld / 3600000);
-  const daysHeld = Math.floor(hoursHeld / 24);
-  const holdStr = daysHeld > 0 ? `${daysHeld}d ${hoursHeld % 24}h` : `${hoursHeld}h`;
-
-  return (
-    <div className={`fixed inset-0 z-[100] bg-black text-white overflow-hidden flex flex-col lg:flex-row transition-all duration-500 ease-out ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-      
-      {/* Close Button overlay */}
-      <button 
-        onClick={onClose} 
-        className="absolute top-4 right-4 lg:top-8 lg:right-8 z-50 p-3 lg:p-4 bg-white/10 hover:bg-red-600 text-white backdrop-blur-md transition-colors border border-white/20 group"
-      >
-        <X className="w-6 h-6 lg:w-8 lg:h-8 group-hover:rotate-90 transition-transform" />
-      </button>
-
-      {/* Left Column: Media & Title (60%) */}
-      <div className="hologram-left relative w-full lg:w-[60%] h-[40vh] lg:h-screen bg-[#050505] border-b lg:border-b-0 lg:border-r border-[#333] flex flex-col justify-end p-6 lg:p-16 overflow-hidden">
-        {listing.bgImageUrl && (
-          <img 
-            src={listing.bgImageUrl} 
-            alt="" 
-            className={`absolute inset-0 w-full h-full object-cover brightness-50 transition-all duration-1000 ${visible ? 'scale-100 opacity-60' : 'scale-110 opacity-0'}`} 
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-
-        <div className={`relative z-10 transition-all duration-700 delay-100 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
-          <img 
-            src={`https://picsum.photos/seed/fav${listing.id}/128/128`} 
-            alt="" 
-            className="w-16 h-16 lg:w-24 lg:h-24 shadow-[0_0_30px_rgba(255,255,255,0.1)] mb-4 lg:mb-6 border-2 border-white/20 bg-black object-cover" 
-          />
-          <h1 className="text-4xl sm:text-6xl lg:text-[100px] xl:text-[130px] font-black uppercase tracking-tighter leading-[0.85] text-white drop-shadow-2xl max-w-full break-words">
-            {listing.displayName || listing.title}
-          </h1>
-          <a 
-            href={listing.url} 
-            target="_blank" 
-            rel="noreferrer" 
-            className="inline-flex items-center gap-2 mt-6 px-4 py-2 bg-white/10 hover:bg-white hover:text-black border border-white/20 transition-colors text-xs lg:text-sm font-mono tracking-widest uppercase text-white"
-          >
-            <ExternalLink size={16} /> Access Domain
-          </a>
-        </div>
-      </div>
-
-      {/* Right Column: Data & Action (40%) */}
-      <div className="relative w-full lg:w-[40%] h-[60vh] lg:h-screen bg-black overflow-y-auto flex flex-col">
-        <div className="flex-1 p-6 lg:p-12 flex flex-col gap-6 lg:gap-10">
-          
-          <div className={`transition-all duration-700 delay-200 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-            <div className="text-red-500 font-mono text-[10px] lg:text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]"></span>
-              Threat Level
-            </div>
-            <div className="text-3xl lg:text-6xl font-black uppercase tracking-tighter">Rank #{listing.rank}</div>
-          </div>
-
-          <div className="h-px w-full bg-[#222]"></div>
-
-          <div className={`transition-all duration-700 delay-300 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-            <div className="text-gray-500 font-mono text-[10px] lg:text-xs uppercase tracking-widest mb-3">Directive</div>
-            <p className="text-base lg:text-xl text-gray-300 font-mono leading-relaxed border-l-2 border-red-500 pl-4 bg-[#0a0a0a] p-4">
-              "{listing.description}"
-            </p>
-          </div>
-
-          <div className="h-px w-full bg-[#222]"></div>
-
-          <div className={`grid grid-cols-2 gap-6 lg:gap-8 transition-all duration-700 delay-400 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-            <div className="bg-[#050505] p-4 border border-[#222]">
-               <div className="text-gray-500 font-mono text-[10px] uppercase tracking-widest mb-2 flex items-center gap-1.5"><Zap size={12} className="text-red-500"/> Power</div>
-               <div className="text-2xl lg:text-3xl font-black">{formatMoney(listing.currentPrice)}</div>
-            </div>
-            <div className="bg-[#050505] p-4 border border-[#222]">
-               <div className="text-gray-500 font-mono text-[10px] uppercase tracking-widest mb-2 flex items-center gap-1.5"><Eye size={12} className="text-red-500"/> Eyes</div>
-               <div className="text-2xl lg:text-3xl font-black">{listing.clicks.toLocaleString()}</div>
-            </div>
-            <div className="bg-[#050505] p-4 border border-[#222]">
-               <div className="text-gray-500 font-mono text-[10px] uppercase tracking-widest mb-2 flex items-center gap-1.5"><Clock size={12} className="text-red-500"/> Hold</div>
-               <div className="text-2xl lg:text-3xl font-black">{holdStr}</div>
-            </div>
-            <div className="bg-[#050505] p-4 border border-[#222]">
-               <div className="text-gray-500 font-mono text-[10px] uppercase tracking-widest mb-2">Category</div>
-               <div className="text-lg lg:text-xl font-black uppercase truncate">{listing.category}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Sticky Action */}
-        <div className={`sticky bottom-0 w-full p-4 lg:p-8 footer-glass backdrop-blur-md border-t border-[#333] transition-all duration-700 delay-500 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
-          <button 
-            onClick={() => { setVisible(false); setTimeout(() => onOvertake(listing), 500); }}
-            className="w-full py-5 lg:py-8 bg-red-600 hover:bg-white text-white hover:text-black transition-all flex flex-col items-center justify-center gap-2 border border-red-500 hover:border-white shadow-[0_0_20px_rgba(220,38,38,0.2)] hover:shadow-[0_0_40px_rgba(255,255,255,0.6)] brutalist-hover group"
-          >
-            <span className="font-black text-xl lg:text-3xl uppercase tracking-tighter">Takeover Billboard</span>
-            <span className="font-mono text-[10px] lg:text-xs uppercase tracking-widest opacity-80 group-hover:opacity-100 group-hover:font-bold">{formatMoney(listing.currentPrice + 1)}+ Required</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import { getListingSlug } from '../utils';
 
 
 // ─── Highly Visual Treemap Cell ───────────────────────────────────────────────
@@ -276,7 +148,7 @@ function layoutTreemap(items: { weight: number }[], container: Rect): Rect[] {
 
 export const Arena = () => {
   const { listings } = useListings();
-  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
 
@@ -293,22 +165,15 @@ export const Arena = () => {
     };
     updateSize();
     window.addEventListener('resize', updateSize);
-    // Give it a tiny delay on mount to ensure CSS has applied
     setTimeout(updateSize, 50);
     return () => window.removeEventListener('resize', updateSize);
   }, []);
 
-  // Ensure weights are strictly positive and descending properly
   const weights = top21Listings.map(l => ({ weight: Math.max(l.currentPrice, 10) }));
   
   const rects = containerSize.w > 0
     ? layoutTreemap(weights, { x: 0, y: 0, w: containerSize.w, h: containerSize.h })
     : [];
-
-  const handleOvertake = (listing: Listing) => {
-    setSelectedListing(null);
-    alert(`Initiate Takeover for ${listing.displayName} (Backend Pending)`);
-  };
 
   return (
     <div className="w-full min-h-screen flex flex-col bg-black overflow-hidden">
@@ -346,18 +211,12 @@ export const Arena = () => {
                   width: rect.w - 4,
                   height: rect.h - 4,
                 }}
-                onClick={() => setSelectedListing(listing)}
+                onClick={() => navigate(`/brand/${getListingSlug(listing)}`)}
               />
             );
           })}
         </div>
       </div>
-
-      <HologramModal
-        listing={selectedListing}
-        onClose={() => setSelectedListing(null)}
-        onOvertake={handleOvertake}
-      />
     </div>
   );
 };

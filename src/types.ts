@@ -4,6 +4,7 @@ export interface Listing {
   displayName?: string;
   bgImageUrl?: string;
   editCode?: string;
+  editId?: string;      // Unique hidden identifier set by owner for editing
   title: string;
   description: string;
   currentPrice: number; 

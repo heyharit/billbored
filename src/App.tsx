@@ -8,6 +8,8 @@ import { Arena } from './pages/Arena';
 import { Terms } from './pages/Terms';
 import { Privacy } from './pages/Privacy';
 import { Categories } from './pages/Categories';
+import { BrandPage } from './pages/BrandPage';
+import { NotFound } from './pages/NotFound';
 
 function App() {
   return (
@@ -19,10 +21,13 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/xxi" element={<Arena />} />
             <Route path="/categories" element={<Categories />} />
+            <Route path="/categories/:category" element={<Categories />} />
+            <Route path="/brand/:slug" element={<BrandPage />} />
             <Route path="/about" element={<About />} />
             <Route path="/rules" element={<Rules />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Footer />
