@@ -39,20 +39,44 @@ export const Home = () => {
     });
   };
 
-  const handleBuyoutSubmit = async (data: { url: string, displayName: string, description: string, category: string, bidAmount: number, bgImageUrl: string, editCode: string, upgradeId?: string }) => {
+  const handleBuyoutSubmit = async (data: { url: string, displayName: string, description: string, category: string, bidAmount: number, bgImageUrl: string, editCode: string, editId: string, upgradeId?: string }) => {
     setIsSubmitting(true);
-    
+    const API_URL = import.meta.env.VITE_API_URL || '';
+
     try {
+      // ── FREE DETAILS UPDATE (no payment needed)
+      if (data.bidAmount === 0 && data.upgradeId) {
+        const response = await fetch(`${API_URL}/api/update-details`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            upgradeId: data.upgradeId,
+            editId: data.editId,
+            editCode: data.editCode,
+            url: data.url,
+            displayName: data.displayName,
+            description: data.description,
+            category: data.category,
+            bgImageUrl: data.bgImageUrl,
+          }),
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Failed to update details');
+        }
+        alert('Details updated successfully!');
+        setIsNewSpotModalOpen(false);
+        setSelectedListing(null);
+        return;
+      }
+
+      // ── PAID PLACEMENT or UPGRADE (Razorpay)
       const res = await loadRazorpayScript();
       if (!res) throw new Error('Razorpay SDK failed to load. Check your connection.');
-
-      const API_URL = import.meta.env.VITE_API_URL || '';
       
       const response = await fetch(`${API_URL}/api/checkout`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
 
@@ -68,20 +92,15 @@ export const Home = () => {
         amount: amount.toString(),
         currency: currency,
         name: 'BillboredX',
-        description: `Takeover Billboard: ${data.displayName}`,
+        description: data.upgradeId ? `Power Upgrade: +$${data.bidAmount}` : `Takeover Billboard: ${data.displayName}`,
         order_id: orderId,
         handler: function () {
-          alert('Payment Successful! Processing takeover...');
+          alert('Payment Successful! Your billboard is updating...');
           setIsNewSpotModalOpen(false);
           setSelectedListing(null);
-          // Wait a second for webhook to update DB, then maybe reload or let Firestore sync handle it
         },
-        prefill: {
-          name: 'Takeover Bidder',
-        },
-        theme: {
-          color: '#DC2626', // Brutalist Red
-        },
+        prefill: { name: 'Takeover Bidder' },
+        theme: { color: '#DC2626' },
       };
 
       const paymentObject = new (window as any).Razorpay(options);
@@ -89,7 +108,7 @@ export const Home = () => {
 
     } catch (e: any) {
       console.error('Checkout error:', e);
-      alert(`Error initializing payment: ${e.message}`);
+      alert(`Error: ${e.message}`);
     } finally {
       setIsSubmitting(false);
     }

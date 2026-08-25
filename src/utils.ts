@@ -30,9 +30,19 @@ export function calculatePayouts(oldPrice: number, newBid: number) {
 
 export function getFaviconUrl(url: string): string {
   try {
-    const domain = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+    return `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${u.origin}&size=128`;
   } catch (e) {
     return '';
   }
+}
+
+export function toSlug(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+export function getListingSlug(listing: any): string {
+  const baseSlug = toSlug(listing.displayName || listing.title);
+  const uniquePart = listing.id.slice(-6);
+  return `${baseSlug}-${uniquePart}`;
 }
